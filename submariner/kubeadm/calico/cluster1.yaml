@@ -1,0 +1,40 @@
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: svccluster2
+spec:
+  cidr: 10.145.0.0/16
+  natOutgoing: false
+  disabled: true
+
+---
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: podcluster2
+spec:
+  cidr: 10.144.0.0/16
+  natOutgoing: false
+  disabled: true
+---
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: svccluster3
+spec:
+  cidr: 10.5.0.0/16
+  natOutgoing: false
+  disabled: true
+
+---
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: podcluster3
+spec:
+  cidr: 10.4.0.0/16
+  natOutgoing: false
+  disabled: true
+
+
+
