@@ -51,27 +51,27 @@ unset https_proxy
 
 kubeadm init --apiserver-advertise-address=172.30.0.56 --apiserver-cert-extra-sans=localhost,127.0.0.1,172.30.0.56,114.117.202.43 --pod-network-cidr=10.44.0.0/16 --service-cidr=10.45.0.0/16 --kubernetes-version v1.19.7
 
- sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
 
- yq -i eval \
-         '.clusters[].cluster.server |= sub("172.30.0.56", "114.117.202.43") | .contexts[].name = "cluster-a" | .current-context = "cluster-a"' \
-         $HOME/.kube/config
+yq -i eval \
+        '.clusters[].cluster.server |= sub("172.30.0.56", "114.117.202.43") | .contexts[].name = "cluster-a" | .current-context = "cluster-a"' \
+        $HOME/.kube/config
 
- sleep 60
+sleep 60
 
- kubectl label node vm-0-56-ubuntu submariner.io/gateway=true
- kubectl taint nodes --all node-role.kubernetes.io/master-
+kubectl label node vm-0-56-ubuntu submariner.io/gateway=true
+kubectl taint nodes --all node-role.kubernetes.io/master-
 
- kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
 
- sleep 120
+sleep 120
 
- DATASTORE_TYPE=kubernetes calicoctl create -f /root/cluster1.yaml
+DATASTORE_TYPE=kubernetes calicoctl create -f /root/cluster1.yaml
 
- subctl deploy-broker 
+subctl deploy-broker 
 
- sleep 60
+sleep 60
 
- scp  broker-info.subm 139.186.201.196:/root
- scp  broker-info.subm 139.186.205.66:/root
- subctl join broker-info.subm --clusterid cluster-a --natt=true
+scp  broker-info.subm 139.186.201.196:/root
+scp  broker-info.subm 139.186.205.66:/root
+subctl join broker-info.subm --clusterid cluster-a --natt=true
