@@ -1,5 +1,5 @@
 
-## Case result
+## xCase result
 
 | broker k8s| mannaged k8s |   pod/pod connectivity | service discovery | CNI version | deployment mode | kube-proxy mode | note |
 | ------------- |  ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
