@@ -10,7 +10,7 @@
 | TKE 独立集群1.18.4 |  1.15.7 | ok (cluster cidr: xx) | ok ( service cidr: xxx)  | VPC-CNI | Cloud | ipvs |  subctl v0.9.0; |
 | TKE 独立集群1.18.4 |  1.15.7 | ok (cluster cidr: xx) | ok ( service cidr: xxx)  | VPC-CNI | Cloud | iptables |  subctl v0.9.0;  |
 | TKE 独立集群1.18.4 |  GKE 1.15.7 | ok (cluster cidr: xx) | ok ( service cidr: xxx)  | **broker** : VPC-CNI **managed**:  | Cloud | iptables |  subctl v0.9.0 |
-
+| TKE 托管集群1.18.4 |  GKE 1.15.7 | ok (cluster cidr: xx) | ok ( service cidr: xxx)  | **broker** : VPC-CNI **managed**:  | Cloud | iptables |  subctl v0.9.0 |
 
 ## Issue list
 
