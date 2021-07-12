@@ -67,25 +67,3 @@ scp  broker-info.subm 139.186.205.66:/root
 
 subctl join broker-info.subm --clusterid cluster-a --natt=true
 
-
-apiServer:
-  certSANs:
-  - localhost
-  - 127.0.0.1
-  - 172.30.0.56
-  - 114.117.202.43
-  extraArgs:
-authorization-mode: Node,RBAC
-  timeoutForControlPlane: 4m0s
-apiVersion: kubeadm.k8s.io/v1beta2
-certificatesDir: /etc/kubernetes/pki
-clusterName: kubernetes
-controllerManager: {}
-dns:
-  type: CoreDNS
-etcd:
-  local:
-dataDir: /var/lib/etcd
-imageRepository: k8s.gcr.io
-kind: ClusterConfiguration
-kubernetesVersion: v1.15.7
