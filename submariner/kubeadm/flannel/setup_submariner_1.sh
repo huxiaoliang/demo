@@ -25,7 +25,7 @@ curl -o /usr/bin/kubeadm https://storage.googleapis.com/kubernetes-release/relea
 curl -o /usr/bin/kubelet https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubelet && chmod +x /usr/bin/kubelet
 curl -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl && chmod +x /usr/bin/kubectl
 curl -o /root/kube-flannel.yml https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-
+sed -i "s/10.244.0.0/${POD_CIDR}/g" kube-flannel.yml
 #5. add a kubelet systemd service
 RELEASE_VERSION="v0.4.0"
 curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service" | sudo tee /etc/systemd/system/kubelet.service
@@ -49,8 +49,8 @@ kubeadm init --apiserver-advertise-address=172.30.0.56 --apiserver-cert-extra-sa
 sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
 
 yq -i eval \
-        '.clusters[].cluster.server |= sub("172.30.0.56", "114.117.202.43") | .contexts[].name = "cluster-a" | .current-context = "cluster-a"' \
-                $HOME/.kube/config
+'.clusters[].cluster.server |= sub("172.30.0.56", "114.117.202.43") | .contexts[].name = "cluster-a" | .current-context = "cluster-a"' \
+$HOME/.kube/config
 sleep 60
 
 kubectl label node vm-0-56-ubuntu submariner.io/gateway=true
@@ -66,3 +66,26 @@ scp  broker-info.subm 139.186.201.196:/root
 scp  broker-info.subm 139.186.205.66:/root
 
 subctl join broker-info.subm --clusterid cluster-a --natt=true
+
+
+apiServer:
+  certSANs:
+  - localhost
+  - 127.0.0.1
+  - 172.30.0.56
+  - 114.117.202.43
+  extraArgs:
+authorization-mode: Node,RBAC
+  timeoutForControlPlane: 4m0s
+apiVersion: kubeadm.k8s.io/v1beta2
+certificatesDir: /etc/kubernetes/pki
+clusterName: kubernetes
+controllerManager: {}
+dns:
+  type: CoreDNS
+etcd:
+  local:
+dataDir: /var/lib/etcd
+imageRepository: k8s.gcr.io
+kind: ClusterConfiguration
+kubernetesVersion: v1.15.7
