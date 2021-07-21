@@ -38,6 +38,8 @@
 <br>
 
 ### submariner NAT traversal case (2)
+prot mapping are neeeded in this case 
+<br>
 
 |    cluster-name    |           role           |        ip address        |         pod cidr         |        service cidr        |         CNI version       |  deployment mode  | kube-proxy mode |        note        |
 |   -------------    |      -------------       |      -------------       |       -------------      |        -------------       |        -------------      |   -------------   |  -------------  |    -------------   |
