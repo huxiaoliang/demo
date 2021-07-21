@@ -16,7 +16,7 @@
 | TKE 独立集群1.18.4 |   AKS 独立集群1.18.8-aliyun   | ok (pod cidr: (borker)10.44.0.128/26;(mannaged)10.67.0.0/16  | ok (service cidr: (borker)10.44.0.192/26;(mannaged)172.16.0.0/16 | Global Router; flannel    |       Cloud      |    iptables     | subctl v0.9.1 |
 | TKE 托管集群1.18.4 |       TKE 托管集群1.18.4      | ok (pod cidr: (borker)10.1.1.0/24; (mannaged)172.29.100.0/24)| ok (service cidr: (borker)10.99.0.0/24; (mannaged)10.199.0.0/24  |           VPC-CNI         |       Cloud      |    iptables     | subctl v0.9.0 |
 
-
+<br>
 
 ### submariner NAT traversal case (1)
 
@@ -35,7 +35,7 @@
 |     cluster-d      |             Y             |            Y             |             Y             |
 
 
-
+<br>
 
 ### submariner NAT traversal case (2)
 
@@ -54,12 +54,14 @@
 |     cluster-c      |             Y             |            Y             |            Y             |             Y             |
 |     cluster-d      |             Y             |            Y             |            Y             |             Y             |
 
-
+<br>
 
 ## Issue list
 
 1. cordon other nodes (gateway election)
 2. 8080 conflict on tke
 3. todo
+	<br>
 	(3.1) globalnet-CIDR
+	<br>
 	(3.2) cluster-a(public ip A), cluster-b(NAT B), cluster-c(NAT C), cluster-d(public ip D)
