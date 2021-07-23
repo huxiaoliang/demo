@@ -18,7 +18,16 @@
 
 <br>
 
+Topology figure are shown as following
+<br>
+![avatar](./myfigure/two-clusters.png)
+
+<br>
+
 ### submariner NAT traversal case (1)
+If you need to transfer files to computers without public IP, 
+you can create a new one with public IP. They are in the same intranet
+<br>
 
 |    cluster-name    |           role           |        ip address        |         pod cidr         |        service cidr        |         CNI version       |  deployment mode  | kube-proxy mode |        note        |
 |   -------------    |      -------------       |      -------------       |       -------------      |        -------------       |        -------------      |   -------------   |  -------------  |    -------------   |
@@ -26,7 +35,7 @@
 |     cluster-c      |  mannaged k8s(v1.19.7)   |     NAT(43.128.85.30)    |       10.4.0.0/16        |         10.5.0.0/16        |       flannel v0.14.0     |    On-Premise     |    iptables     |    subctl v0.9.0   |
 |     cluster-d      |  mannaged k8s(v1.19.7)   |      150.109.237.90      |       10.88.0.0/16       |        10.89.0.0/16        |       flannel v0.14.0     |    On-Premise     |    iptables     |    subctl v0.9.0   |
 
-
+<br>
 
 |    cluster-name    |         cluster-a         |        cluster-c         |         cluster-d         |
 |   -------------    |       -------------       |      -------------       |       -------------       |
@@ -34,6 +43,11 @@
 |     cluster-c      |             Y             |            Y             |             Y             |
 |     cluster-d      |             Y             |            Y             |             Y             |
 
+<br>
+
+Topology figure are shown as following
+<br>
+![avatar](./myfigure/NAT穿透例1.png)
 
 <br>
 
@@ -48,6 +62,7 @@ prot mapping are neeeded in this case
 |     cluster-c      |  mannaged k8s(v1.19.7)   |     NAT(43.128.85.30)    |       10.4.0.0/16        |         10.5.0.0/16        |       flannel v0.14.0     |    On-Premise     |    iptables     |    subctl v0.9.1   |
 |     cluster-d      |  mannaged k8s(v1.19.7)   |      150.109.237.90      |       10.88.0.0/16       |        10.89.0.0/16        |       flannel v0.14.0     |    On-Premise     |    iptables     |    subctl v0.9.1   |
 
+<br>
 
 |    cluster-name    |         cluster-a         |        cluster-b         |        cluster-c         |         cluster-d         |
 |   -------------    |       -------------       |      -------------       |      -------------       |       -------------       |
@@ -58,10 +73,16 @@ prot mapping are neeeded in this case
 
 <br>
 
+Topology figure are shown as following
+<br>
+![avatar](./myfigure/NAT穿透例2.png)
+
+<br>
+
 ## Issue list
 
-1. cordon other nodes (gateway election)
-2. 8080 conflict on tke
+1. for a cluster with multi nodes, it would be better cordon other nodes (gateway election)
+2. 8080 conflict (The port are needed both in TKE and the pod submariner-gateway)
 3. todo
 	<br>
 	(3.1) globalnet-CIDR
