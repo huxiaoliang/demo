@@ -81,10 +81,19 @@ Topology figure are shown as following
 
 ## Issue list
 
-1. for a cluster with multi nodes, it would be better cordon other nodes (gateway election)
+1. for a cluster with multi nodes, it would be better to cordon other nodes (gateway election)
 2. 8080 conflict (The port are needed both in TKE and the pod submariner-gateway)
 3. todo
 	<br>
 	(3.1) globalnet-CIDR
 	<br>
 	(3.2) cluster-a(public ip A), cluster-b(NAT B), cluster-c(NAT C), cluster-d(public ip D)
+4. reference links
+	<br>
+	(4.1)https://github.com/submariner-io/submariner/issues/1492
+	<br>
+	(4.2)https://github.com/submariner-io/submariner/issues/1380
+	<br>
+	(4.3)https://github.com/submariner-io/submariner/issues/1374
+	<br>
+	(4.4)https://github.com/submariner-io/submariner/issues/1372
