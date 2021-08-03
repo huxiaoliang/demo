@@ -20,7 +20,21 @@
 
 Topology figure are shown as following
 <br>
-![avatar](./myfigure/two-clusters.png)
+![avatar](./picture/two-clusters.png)
+
+<br>
+
+### globalnet controller
+
+|     broker k8s     |         mannaged k8s          |                     pod/pod connectivity                     |                        service discovery                         |                          Globalnet-CIDR                          |         CNI version       |  deployment mode | kube-proxy mode |        note        |
+|   -------------    |         -------------         |                         -------------                        |                          -------------                           |                          -------------                           |        -------------      |   -------------  |  -------------  |    -------------   |
+|      1.19.1        |            1.19.1             | not supported (pod cidr(broker and mannaged): 10.44.0.0/16)  |       ok (service cidr: (borker and mannaged)10.45.0.0/16)       |      (borker)242.254.144.0/24; (mannaged)242.254.145.0/24        |       flannel v0.14.0     |    On-Premise    |    iptables     | subctl v0.10.0-rc0 |
+
+<br>
+
+Topology figure are shown as following
+<br>
+![avatar](./picture/globalnet-controller.png)
 
 <br>
 
@@ -47,7 +61,7 @@ you can create a new one with public IP. They are in the same intranet
 
 Topology figure are shown as following
 <br>
-![avatar](./myfigure/NAT穿透例1.png)
+![avatar](./picture/NAT-traversal-case1.png)
 
 <br>
 
@@ -75,7 +89,7 @@ prot mapping are neeeded in this case
 
 Topology figure are shown as following
 <br>
-![avatar](./myfigure/NAT穿透例2.png)
+![avatar](./picture/NAT-traversal-case2.png)
 
 <br>
 
@@ -85,9 +99,7 @@ Topology figure are shown as following
 2. 8080 conflict (The port are needed both in TKE and the pod submariner-gateway)
 3. todo
 	<br>
-	(3.1) globalnet-CIDR
-	<br>
-	(3.2) cluster-a(public ip A), cluster-b(NAT B), cluster-c(NAT C), cluster-d(public ip D)
+	(3.1) cluster-a(public ip A), cluster-b(NAT B), cluster-c(NAT C), cluster-d(public ip D)
 4. reference links
 	<br>
 	(4.1)https://github.com/submariner-io/submariner/issues/1492
