@@ -66,7 +66,7 @@ Topology figure are shown as following
 <br>
 
 ### submariner NAT traversal case (2)
-prot mapping are neeeded in this case 
+port mapping are neeeded in this case 
 <br>
 
 |    cluster-name    |           role           |        ip address        |         pod cidr         |        service cidr        |         CNI version       |  deployment mode  | kube-proxy mode |        note        |
@@ -91,8 +91,22 @@ Topology figure are shown as following
 <br>
 ![avatar](./picture/NAT-traversal-case2.png)
 
+
+<br>
+### case for the deploy-submariner
+<br>
+reference link https://github.com/DanielXLee/deploy-submariner
+<br>
+update Ansible and go version before deploying
+
 <br>
 
+|     broker k8s     |         mannaged k8s          |                     pod/pod connectivity                     |                        service discovery                         |         CNI version       |  deployment mode | kube-proxy mode |        note       |
+|   -------------    |         -------------         |                         -------------                        |                          -------------                           |        -------------      |   -------------  |  -------------  |    -------------  |
+|      1.19.7        |            1.19.7             | ok (pod cidr: (borker)10.44.0.0/16; (mannaged)10.144.0.0/16) | ok (service cidr: (borker)10.45.0.0/16; (mannaged)10.145.0.0/16) |       flannel v0.14.0     |    On-Premise    |    iptables     |    subctl v0.9.1  |
+
+
+<br>
 ## Issue list
 
 1. for a cluster with multi nodes, it would be better to cordon other nodes (gateway election)
