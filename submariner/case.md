@@ -20,7 +20,10 @@
 
 Topology figure are shown as following
 <br>
+
 ![avatar](./picture/two-clusters.png)
+
+<br>
 
 <br>
 
@@ -34,8 +37,10 @@ Topology figure are shown as following
 
 Topology figure are shown as following
 <br>
+
 ![avatar](./picture/globalnet-controller.png)
 
+<br>
 <br>
 
 ### submariner NAT traversal case (1)
@@ -61,8 +66,10 @@ you can create a new one with public IP. They are in the same intranet
 
 Topology figure are shown as following
 <br>
+
 ![avatar](./picture/NAT-traversal-case1.png)
 
+<br>
 <br>
 
 ### submariner NAT traversal case (2)
@@ -89,10 +96,14 @@ port mapping are neeeded in this case
 
 Topology figure are shown as following
 <br>
+
 ![avatar](./picture/NAT-traversal-case2.png)
 
 
 <br>
+
+<br>
+
 ### case for the deploy-submariner
 <br>
 reference link https://github.com/DanielXLee/deploy-submariner
@@ -101,12 +112,36 @@ update Ansible and go version before deploying
 
 <br>
 
-|     broker k8s     |         mannaged k8s          |                     pod/pod connectivity                     |                        service discovery                         |         CNI version       |  deployment mode | kube-proxy mode |        note       |
-|   -------------    |         -------------         |                         -------------                        |                          -------------                           |        -------------      |   -------------  |  -------------  |    -------------  |
-|      1.19.7        |            1.19.7             | ok (pod cidr: (borker)10.44.0.0/16; (mannaged)10.144.0.0/16) | ok (service cidr: (borker)10.45.0.0/16; (mannaged)10.145.0.0/16) |       flannel v0.14.0     |    On-Premise    |    iptables     |    subctl v0.9.1  |
+<br>
+
+|     broker k8s     |         mannaged k8s          |                     pod/pod connectivity                     |                        service discovery                         |         CNI version       |  deployment mode | kube-proxy mode |       note        |
+|   -------------    |         -------------         |                         -------------                        |                          -------------                           |        -------------      |   -------------  |  -------------  |   -------------   |
+|      1.19.7        |            1.19.7             | ok (pod cidr: (borker)10.44.0.0/16; (mannaged)10.144.0.0/16) | ok (service cidr: (borker)10.45.0.0/16; (mannaged)10.145.0.0/16) |                           |    On-Premise    |    iptables     | submariner v0.9.1 |
+
+<br>
+
+<br>
+
+### case for the knitnet-operator
+<br>
+reference link https://github.com/tkestack/knitnet-operator
+<br>
+update go version before deploying
+
+<br>
+
+<br>
+
+|     broker k8s     |         mannaged k8s          |                     pod/pod connectivity                     |                        service discovery                         |         CNI version       |  deployment mode | kube-proxy mode |       note        |
+|   -------------    |         -------------         |                         -------------                        |                          -------------                           |        -------------      |   -------------  |  -------------  |   -------------   |
+|      1.18.4        |            1.18.4             |   ok (pod cidr: (borker)10.0.0.0/24; (mannaged)10.1.1.0/24)  |  ok (service cidr: (borker)10.10.0.0/24; (mannaged)10.20.0.0/24) |                           |       Cloud      |    iptables     | submariner v0.9.1 |
+
 
 
 <br>
+
+<br>
+
 ## Issue list
 
 1. for a cluster with multi nodes, it would be better to cordon other nodes (gateway election)
