@@ -116,7 +116,7 @@ update Ansible and go version before deploying
 
 |     broker k8s     |         mannaged k8s          |                     pod/pod connectivity                     |                        service discovery                         |         CNI version       |  deployment mode | kube-proxy mode |       note        |
 |   -------------    |         -------------         |                         -------------                        |                          -------------                           |        -------------      |   -------------  |  -------------  |   -------------   |
-|      1.19.7        |            1.19.7             | ok (pod cidr: (borker)10.44.0.0/16; (mannaged)10.144.0.0/16) | ok (service cidr: (borker)10.45.0.0/16; (mannaged)10.145.0.0/16) |                           |    On-Premise    |    iptables     | submariner v0.9.1 |
+|      1.19.7        |            1.19.7             | ok (pod cidr: (borker)10.44.0.0/16; (mannaged)10.144.0.0/16) | ok (service cidr: (borker)10.45.0.0/16; (mannaged)10.145.0.0/16) |      flannel v0.14.0      |    On-Premise    |    iptables     | submariner v0.9.1 |
 
 <br>
 
@@ -134,7 +134,7 @@ update go version before deploying
 
 |     broker k8s     |         mannaged k8s          |                     pod/pod connectivity                     |                        service discovery                         |         CNI version       |  deployment mode | kube-proxy mode |       note        |
 |   -------------    |         -------------         |                         -------------                        |                          -------------                           |        -------------      |   -------------  |  -------------  |   -------------   |
-|      1.18.4        |            1.18.4             |   ok (pod cidr: (borker)10.0.0.0/24; (mannaged)10.1.1.0/24)  |  ok (service cidr: (borker)10.10.0.0/24; (mannaged)10.20.0.0/24) |                           |       Cloud      |    iptables     | submariner v0.9.1 |
+|      1.18.4        |            1.18.4             |   ok (pod cidr: (borker)10.0.0.0/24; (mannaged)10.1.1.0/24)  |  ok (service cidr: (borker)10.10.0.0/24; (mannaged)10.20.0.0/24) |           VPC-CNI         |       Cloud      |    iptables     | submariner v0.9.1 |
 
 
 
