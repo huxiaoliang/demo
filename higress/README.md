@@ -990,13 +990,14 @@ kubectl get pod -n higress-system -l app=higress-gateway
 kubectl logs -n higress-system deploy/higress-gateway -c higress-gateway --tail=50
 ```
 
-### 问题 3: HTTP 重定向不生效
+### 问题 3: Grafana 持续报错
 
-**症状**：访问 http:// 自动不跳转到 https://
+**症状**：浏览器访问 Higress Console 的 Grafana 时，持续报错，但不影响面部使用
 
-**原因**：Higress 默认不自动重定向
-
-**解决方案**：在 Higress Console 配置中启用强制 HTTPS
+```
+transport_websocket.js:32 WebSocket connection to 'wss://ai4ops.cc/grafana/api/live/ws' failed:
+```
+**原因**：不明
 
 ### 问题 4: Ingress 路由优先级冲突
 
@@ -1036,7 +1037,6 @@ kubectl patch ingress your-ingress -n default --type=json -p='[
 | apache-ingress | `/apache` | 200 | 处理 Apache 相关请求 |
 | claude-ingress | `/claude` | 200 | 处理 Claude 安装脚本 |
 | geese-spec-ingress | `/geese-spec` | 200 | 处理 Geese Spec 服务 |
-| higress-grafana-ingress | `/grafana` | 默认 | Grafana 监控 |
 
 **优先级匹配规则**：
 1. Higress Controller 按优先级排序路由
