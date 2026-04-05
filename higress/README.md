@@ -154,7 +154,7 @@ nodes:
 ```bash
 # 跨节点访问测试
 curl -I http://ai4ops.cc/
-curl -kI https://ai4ops.cc/
+curl -k -I https://ai4ops.cc/
 ```
 
 ### 创建 Kind 集群
@@ -277,7 +277,7 @@ higress-console-6899db4cc4-xm8fj      1/1     Running   1 (4d18h ago)   6d
 
 ### 证书获取流程
 
-Let **Encrypt 使用 DNS-01 挑战获取证书，流程如下：
+Let's Encrypt 使用 DNS-01 挑战获取证书，流程如下：
 
 ```
 1. acme.sh 向 Let's Encrypt 申请证书
@@ -371,23 +371,22 @@ Let's Encrypt 需要验证后才会签发证书。
 
 #### DNS-01 挑战流程
 
+##### 第 1 步：申请证书
+
 ```
-第 1 步：申请证书
-┌─────────────────────────────────────────┐
-│ 你 → acme.sh → Let's Encrypt     │
-│ "我想为 ai4ops.cc 获取证书"      │
-└─────────────────────────────────────────┘
+你 → acme.sh → Let's Encrypt
+"我想为 ai4ops.cc 获取证书"
               ↓
 Let's Encrypt: "好的，证明你拥有这个域名"
               ↓
 Let's Encrypt 生成随机验证字符串: "5NrPg0HWCPJnrUU..."
 ```
 
-第 2 步：添加 DNS TXT 记录
-┌─────────────────────────────────────────┐
-│ acme.sh → Cloudflare API              │
-│ "添加这个 TXT 记录"                │
-└─────────────────────────────────────────┘
+##### 第 2 步：添加 DNS TXT 记录
+
+```
+acme.sh → Cloudflare API
+"添加这个 TXT 记录"
               ↓
 Cloudflare: 添加记录
 域名: _acme-challenge.ai4ops.cc
@@ -395,12 +394,12 @@ Cloudflare: 添加记录
 值:   "5NrPg0HWCPJnrUU..."
 ```
 
-第 3 步：Let's Encrypt 验证
+##### 第 3 步：Let's Encrypt 验证
+
 ```
-         Let's Encrypt              │
-│ "等待 DNS 传播..."                 │
-│ "查询 TXT 记录..."                  │
-└─────────────────────────────────────────┘
+Let's Encrypt
+"等待 DNS 传播..."
+"查询 TXT 记录..."
               ↓
 Let's Encrypt 查询 DNS: _acme-challenge.ai4ops.cc
               ↓
@@ -408,20 +407,20 @@ Let's Encrypt 查询 DNS: _acme-challenge.ai4ops.cc
 如果值不匹配 = 验证失败...
 ```
 
-第 4 步：签发证书
+##### 第 4 步：签发证书
+
 ```
-         Let's Encrypt              │
-│ "验证通过，现在签发证书"         │
-└─────────────────────────────────────────┘
+Let's Encrypt
+"验证通过，现在签发证书"
               ↓
 返回证书和私钥文件
 ```
 
-第 5 步：删除 DNS TXT 记录
+##### 第 5 步：删除 DNS TXT 记录
+
 ```
-         acme.sh → Cloudflare API              │
-│ "清理临时记录"                      │
-└─────────────────────────────────────────┘
+acme.sh → Cloudflare API
+"清理临时记录"
               ↓
 Cloudflare: 删除记录
 域名: _acme-challenge.ai4ops.cc
@@ -457,47 +456,46 @@ Let's Encrypt 验证
 
 ##### 场景 2：通配符域名
 
-```
-需求：为 *.example.com 获取证书
+需求：为 `*.example.com` 获取证书
 
-HTTP-01: 
-  - 需要为每个子域创建 /.well-known/acme-challenge/ 文件
-  - 无法一次性覆盖所有子域
-
-DNS-01:
-  - 只需要在 _acme-challenge.example.com 添加一个 TXT 记录
-  - 通配符域名自动生效
-```
+| 方式 | 说明 |
+|------|------|
+| HTTP-01 | 需要为每个子域创建 `/.well-known/acme-challenge/` 文件，无法一次性覆盖所有子域 |
+| DNS-01 | 只需要在 `_acme-challenge.example.com` 添加一个 TXT 记录，通配符域名自动生效 |
 
 ##### 场景 3：无法开放 80 端口
 
-```
 某些环境：
 - 公司内网
 - 只允许 443 端口
 - 防火墙限制
 
 DNS-01 完美避开了 80 端口的需求
-```
 
 ---
 
 #### 为什么 acme.sh 能自动操作？
 
-### 关键：Cloudflare API Token
+##### 关键：Cloudflare API Token
+
+**重要注意事项**：
+- 不要在此文档中包含敏感的 API Token
+- 实际的 Token 由 acme.sh 保存在 `/root/.acme.sh/account.conf`
+- 文档中的 `CF_Token="your_cloudflare_api_token_here"` 仅是示例格式
+- Token 权限要求：Zone - DNS - Edit，Zone - Zone - Read
 
 ```bash
 # 有 Token = 拥有 API 操作权限
-CF_Token="cfut_2Kw2SbVahd2nykZ3iEiT5QQe466r2aypN83K8GiR77daada2"
+CF_Token="your_cloudflare_api_token_here"
 ```
 
 **acme.sh 使用 Token 的能力**：
 
-| 操作 | 需要 Token | 用途 |
-|------|------------|------|
-| 添加 TXT 记录 | ✅ | 验证域名所有权 |
-| 删除 TXT 记录 | ✅ | 验证后清理记录 |
-| 查询记录状态 | ✅ | 检查记录是否生效 |
+| 操作 | 需要 Token | 用途 | 实际行为 |
+|------|------------|------|----------|
+| 添加 TXT 记录 | ✅ | acme.sh 通过 API 自动添加 |
+| 删除 TXT 记录 | ✅ | acme.sh 通过 API 自动删除 |
+| 查询记录状态 | ❌ | 不可操作（仅用于调试） |
 | 获取证书 | ✅ | 自动化整个流程 |
 | 证书续期 | ✅ | acme.sh 复用已保存的 Token |
 
@@ -505,38 +503,30 @@ CF_Token="cfut_2Kw2SbVahd2nykZ3iEiT5QQe466r2aypN83K8GiR77daada2"
 
 #### 实际例子：你的环境
 
-```
 1. acme.sh 读取 CF_Token（从 account.conf）
-   ↓
 2. acme.sh 向 Let's Encrypt 申请证书
-   ↓
 3. Let's Encrypt 要求验证 ai4ops.cc
-   ↓
 4. acme.sh 使用 Token 调用 Cloudflare API
-   ↓
-5. Cloudflare 添加: _acme-challenge.ai4ops.cc TXT "xxx"
-   ↓
+5. Cloudflare 添加: `_acme-challenge.ai4ops.cc` TXT `"xxx"`
 6. Let's Encrypt 查询 DNS，验证通过
-   ↓
 7. Cloudflare 删除 TXT 记录
-   ↓
 8. Let's Encrypt 签发证书
-   ↓
-9. 证书保存到 /root/.acme.sh/ai4ops.cc_ecc/
-```
+9. 证书保存到 `/root/.acme.sh/ai4ops.cc_ecc/`
 
 ---
 
-#### 对比 HTTP-01 和 DNS-01
+##### 对比 HTTP-01 和 DNS-01
 
-| 方面 | 验证文件位置 | 防火墙需求 | 公网需求 | 内网适用 |
-|------|----------------|----------|----------|----------|----------|
-| HTTP-01 | 服务器 /.well-known/acme-challenge/ | 开放 80 端口 | 需要 | ❌ |
-| DNS-01 | DNS TXT 记录 | 开放 53 端口 | 不需要 | ✅ |
+| 对比项 | HTTP-01 | DNS-01 |
+|---|---|---|
+| 验证方式 | Web 服务器文件 | DNS TXT 记录 |
+| 验证位置 | 服务器 /.well-known/acme-challenge/ | DNS 服务器 |
+| 防火墙需求 | 需要开放 80 端口 | 需要开放 53 端口 |
+| 公网 IP 需求 | 需要公网 IP 可达 | 不需要公网 IP |
+| 内网适用性 | 不适用内网 | 适用于内网 |
+| 通配符证书 | 不支持 | 支持 |
 
----
-
-#### 总结
+##### 总结
 
 DNS TXT 记录用于：
 - **证明域名所有权**：只有能控制域名 DNS 的人才能添加/删除 TXT 记录
@@ -546,7 +536,8 @@ DNS TXT 记录用于：
 
 **关键**：Cloudflare API Token 提供了自动操作 DNS 的能力，让整个过程完全自动化。
 
-**成功输出**：
+##### 成功输出
+
 ```
 [Sun Apr 5 10:47:50 AM CST 2026] Using CA: https://acme-v02.api.letsencrypt.org/directory
 [Sun Apr 5 10:47:52 AM CST 2026] Registered
@@ -562,7 +553,7 @@ DNS TXT 记录用于：
 [Sun Apr 5 10:48:37 AM CST 2026] Verification finished, beginning signing.
 [Sun Apr 5 10:48:40 AM CST 2026] Downloading cert.
 [Sun Apr 5 10:48:41 AM CST 2026] Cert success.
-[Sun Apr 5 10:48:41 AM CST 2026] Your cert is in: /root/.acme.sh.sh/ai4ops.cc_ecc/ai4ops.cc.cer
+[Sun Apr 5 10:48:41 AM CST 2026] Your cert is in: /root/.acme.sh/ai4ops.cc_ecc/ai4ops.cc.cer
 ```
 
 ### 证书文件位置
@@ -652,76 +643,28 @@ kubectl get svc apache-service
 
 ### 数据流图：浏览器 → ai4ops.cc → Apache Pod
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 用户浏览器                                                 │
-│ 请求: https://ai4ops.cc/apache                            │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Cloudflare CDN                                               │
-│  - DDoS 防护                                               │
-│  - CDN 加速                                                 │
-│  - SSL 终止（Let's Encrypt 证书）                         │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 物理主机 (106.52.177.223)                                 │
-│  监听: 443 (HTTPS)                                        │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Docker 端口映射                                           │
-│  宿主机 443 → 容器 443                                │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Kind Node 容器 (pro-control-plane)                           │
-│  - 容器 IP: 172.19.0.2                                  │
-│  - 监听: 443 (hostNetwork=true)                          │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Higress Gateway Pod                                       │
-│  - 监听: 0.0.0.0:443 (hostNetwork=true)                │
-│  - TLS 终止: ai4ops-tls Secret                            │
-│  - X-Forwarded-For: <客户端IP>                             │
-│  - X-Forwarded-Proto: https                               │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Ingress 路由匹配 (higress-controller)                       │
-│  - Host: ai4ops.cc ✓                                      │
-│  - Path: /apache (Prefix) ✓                              │
-│  - TLS: ai4ops-tls ✓                                     │
-│  - Rewrite: /apache → / ✓                                   │
-│  - Backend: apache-service:80                                  │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Kubernetes Service (apache-service)                              │
-│  - Type: ClusterIP                                          │
-│  - ClusterIP: 10.96.40.103                                  │
-│  - Selector: app=apache                                        │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 负载均衡选择                                                 │
-│  可用后端: [apache-app-*]                               │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Apache Pod (apache-app-*)                                    │
-│  - Pod IP: 10.244.0.14                                    │
-│  - 监听: 80                                                 │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-请求处理:
-  - Method: GET
-  - URI: /
-  - 返回 Apache 欢迎页面
-  - HTTP Response: 200 OK
-  - Content-Type: text/html; charset=UTF-8
+```mermaid
+graph TD
+    User[用户浏览器<br/>请求: https://ai4ops.cc/apache] --> CF[Cloudflare CDN<br/>- DDoS 防护<br/>- CDN 加速<br/>- SSL 终止]
+    CF --> Host[物理主机 106.52.177.223<br/>监听: 443 HTTPS]
+    Host --> Docker[Docker 端口映射<br/>宿主机 443 → 容器 443]
+    Docker --> Kind[Kind Node 容器 pro-control-plane<br/>容器 IP: 172.19.0.2<br/>监听: 443 hostNetwork=true]
+    Kind --> Gateway[Higress Gateway Pod<br/>监听: 0.0.0.0:443<br/>TLS 终止: ai4ops-tls]
+    Gateway --> Ingress[Ingress 路由匹配<br/>Host: ai4ops.cc<br/>Path: /apache Prefix<br/>Backend: apache-service:80]
+    Ingress --> Service[Kubernetes Service apache-service<br/>Type: ClusterIP<br/>ClusterIP: 10.96.40.103]
+    Service --> LB[负载均衡选择<br/>可用后端: apache-app-*]
+    LB --> Pod[Apache Pod apache-app-*<br/>Pod IP: 10.244.0.14<br/>监听: 80]
+
+    style User fill:#e1f5ff
+style CF fill:#fff3e0
+style Host fill:#f3e5f5
+style Docker fill:#e8f5e9
+style Kind fill:#fce4ec
+style Gateway fill:#e0f2f1
+style Ingress fill:#f1f8e9
+style Service fill:#fff8e1
+style LB fill:#e3f2fd
+style Pod fill:#ffebee
 ```
 
 ---
@@ -737,7 +680,7 @@ kubectl apply -f geese-spec-higress.yaml
 ### 验证部署
 
 ```bash
-# 等待待 Pod 就绪
+# 等待 Pod 就绪
 kubectl wait --for=condition=available deployment/geese-spec-app -n default --timeout=300s
 
 # 检查 Pod
@@ -749,162 +692,65 @@ kubectl get svc geese-spec-service
 
 ### 数据流图：浏览器 → ai4ops.cc → Geese-spec Pod
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 用户浏览器                                                 │
-│ 请求: https://ai4ops.cc/geese-spec                           │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Cloudflare CDN                                               │
-│  - DDoS 防护                                               │
-│  - CDN 加速                                                 │
-│  - SSL 终止（Let's Encrypt 证书）                         │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 物理主机 (106.52.177.223)                                 │
-│  监听: 443 (HTTPS)                                        │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Docker 端口映射                                           │
-│  宿主机 443 → 容器 443                                │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Kind Node 容器 (pro-control-plane)                           │
-│  - 容器 IP: 172.19.0.2                                  │
-│  - 监听: 443 (hostNetwork=true)                          │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Higress Gateway Pod                                       │
-│  - 监听: 0.0.0.0:443 (hostNetwork=true)                │
-│  - TLS 终止: ai4ops-tls Secret                            │
-│  - X-Forwarded-For: <客户端IP>                             │
-│  - X-Forwarded-Proto: https                               │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Ingress 路由匹配 (higress-controller)                       │
-│  - Host: ai4ops.cc ✓                                      │
-│  - Path: /geese-spec (Prefix) ✓                           │
-│  - TLS: ai4ops-tls ✓                                     │
-│  - Backend: geese-spec-service:9000                            │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Kubernetes Service (geese-spec-service)                           │
-│  - Type: ClusterIP                                          │
-│  - ClusterIP: 10.96.60.122                                  │
-│  - Selector: app=geese-spec                                   │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ 负载均衡选择                                                 │
-│  可用后端: [geese-spec-app-*]                            │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Geese-spec Pod (geese-spec-app-*)                            │
-│  - Pod IP: 10.244.0.14                                    │
-│  - 监听: 9000                                              │
-│  - 镜像: huxl/geese-mcp-server:e0f2650                   │
-└──────────────────────────────────────────────────────────────────────────┘
-                              ↓
-MCP 服务处理:
-  - 处理 MCP 协议请求
-  - 返回 Geese Spec 相关的数据
-  - HTTP Response: 200 OK
-  - Content-Type: application/json
-```
+```mermaid
+graph TD
+    User[用户浏览器<br/>请求: https://ai4ops.cc/geese-spec] --> CF[Cloudflare CDN<br/>- DDoS 防护<br/>- CDN 加速<br/>- SSL 终止]
+    CF --> Host[物理主机 106.52.177.223<br/>监听: 443 HTTPS]
+    Host --> Docker[Docker 端口映射<br/>宿主机 443 → 容器 443]
+    Docker --> Kind[Kind Node 容器 pro-control-plane<br/>容器 IP: 172.19.0.2<br/>监听: 443 hostNetwork=true]
+    Kind --> Gateway[Higress Gateway Pod<br/>监听: 0.0.0.0:443<br/>TLS 终止: ai4ops-tls]
+    Gateway --> Ingress[Ingress 路由匹配<br/>Host: ai4ops.cc<br/>Path: /geese-spec Prefix<br/>Backend: geese-spec-service:9000]
+    Ingress --> Service[Kubernetes Service geese-spec-service<br/>Type: ClusterIP<br/>ClusterIP: 10.96.60.122]
+    Service --> LB[负载均衡选择<br/>可用后端: geese-spec-app-*]
+    LB --> Pod[Geese-spec Pod Pod<br/>Pod IP: 10.244.0.14<br/>监听: 9000<br/>镜像: huxl/geese-mcp-server:e0f2650]
 
----
+    style User fill:#e1f5ff
+    style CF fill:#fff3e0
+    style Host fill:#f3e5f5
+    style Docker fill:#e8f5e9
+    style Kind fill:#fce4ec
+    style Gateway fill:#e0f2f1
+    style Ingress fill:#f1f8e9
+    style Service fill:#fff8e1
+    style LB fill:#e3f2fd
+    style Pod fill:#ffebee
+```
 
 ## 完整数据流图
 
 ### 所有服务访问路径
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                                                             │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │ 用户浏览器                                             │  │
-│  │ https://ai4ops.cc/ (Higress Console)                │  │
-│  │ https://ai4ops.cc/grafana (Grafana)                │  │
-│  │ https://ai4ops.cc/apache (Apache)                      │  │
-│  │ https://ai4ops.cc/claude (Claude 安装脚本)           │  │
-│  │ https://ai4ops.cc/geese-spec (Geese-spec)             │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│                         ↓                                    │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │ Cloudflare CDN (Orange Cloudflare Cloud)            │  │
-│  │ - DDoS 防护                                          │  │
-│  │ - SSL 终止（Let's Encrypt）                           │  │
-│  │ - CDN 缓存加速                                        │  │
-│  │ - WAF 保护                                            │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│                         ↓                                    │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │ 物理主机 (106.52.177.223, 10.1.0.14)           │  │
-│  │ 端口: 80, 443, 6443                               │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│                         ↓                                    │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │ Docker 端口映射                                     │  │
-│  │ 80 → 80 (宿主机) → 80 (容器)                  │  │
-│  │ 443 → 443 (宿主机) → 443 (容器)                │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│                         ↓                                    │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │ Kind Node: pro-control-plane                          │  │
-│  │ - Kubernetes v1.34.0                                  │  │
-│  │ - 容器 IP: 172.19.0.2                               │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│                         ↓                                    │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │ Kubernetes 集群                                      │  │
-│  │ Namespaces: default, higress-system                    │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│            ┌──────────────┴──────────────┐                      │
-│            ↓                      ↓                              │
-│  ┌────────────────────┐  ┌────────────────────────────┐   │  │
-│  │ Higress Gateway  │  │ Higress Controller     │   │  │
-│  │                 │  │                       │   │  │
-│  │ Pod: higress-  │  │ Pod: higress-      │   │  │
-│  │ gateway-*       │  │ controller-*          │   │  │
-│  │                 │  │                       │   │  │
-│  │ hostNetwork=true│  │ 监听 Ingress        │   │  │
-│  │                 │  │ 变化，转换路由       │   │  │
-│  └────────────────────┘  └────────────────────────────┘   │  │
-│            ↓                      ↓                              │
-│  ┌──────────────────────────────────────────────────────┐   │  │
-│  │ Ingress 规则匹配 (higress.io/priority) │   │  │
-│  │                                               │   │  │
-│  │ 优先级 100: / → higress-console       │   │  │
-│  │ 优先级 200: /apache → apache-service    │   │  │
-│  │ 优先级 200: /claude → apache-service     │   │  │
-│  │ 优先级 200: /geese-spec → geese-spec   │   │  │
-│  │ 优先级 默认: /grafana → grafana       │   │  │
-│  └──────────────────────────────────────────────────────┘   │  │
-│            ↓                                              │  │
-│  ┌──────────────┴──────────────┴──────────────┐      │  │
-│  ↓            ↓            ↓              ↓      │  │
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────┐  │  │
-│  │Apache Pod│ │Geese Pod │ │Console   │ │Grafana│  │  │
-│  │          │ │          │ │          │ │  │  │
-│  │apache-app│ │geese-app│ │higress-  │ │higress-│  │  │
-│  │          │ │          │ │console-* │ │console-│  │  │
-│  │10.244.0.14│ │10.244.0.14│ │172.19.0.2│ │172.19.0.2│  │  │
-│  │Port: 80 │ │Port:9000│ │Port:8080 │ │Port:3000│  │  │
-│  └──────────┘ └──────────┘ └──────────┘ └────┘  │  │
-│                                                         │  │
-│           ✅ 所有服务都已配置 HTTPS                 │  │
-└──────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    User[用户浏览器<br/>- / Higress Console<br/>- /grafana Grafana<br/>- /apache Apache<br/>- /claude Claude 安装脚本<br/>- /geese-spec Geese-spec]
+    User --> CF[Cloudflare CDN Orange Cloud<br/>- DDoS 防护<br/>- SSL 终止<br/>- CDN 缓存加速<br/>- WAF 保护]
+    CF --> Host[物理主机 106.52.177.223 10.1.0.14<br/>端口: 80 443 6443]
+    Host --> Docker[Docker 端口映射<br/>80 → 80<br/>443 → 443]
+    Docker --> Kind[Kind Node: pro-control-plane<br/>- Kubernetes v1.34.0<br/>- 容器 IP: 172.19.0.2]
+    Kind --> K8s[Kubernetes 集群<br/>Namespaces: default higress-system]
+    K8s --> Gateway[Higress Gateway<br/>hostNetwork=true]
+    K8s --> Controller[Higress Controller<br/>监听 Ingress]
+    Gateway --> Ingress[Ingress 规则匹配<br/>higress.io/priority<br/>100: / → higress-console<br/>200: /apache → apache-service<br/>200: /claude → apache-service<br/>200: /geese-spec → geese-spec<br/>默认: /grafana → grafana]
+    Ingress --> Apache[Apache Pod<br/>apache-app<br/>10.244.0.14:80]
+    Ingress --> Geese[Geese-spec Pod<br/>geese-app<br/>10.244.0.14:9000]
+    Ingress --> Console[Console Pod<br/>higress-console-*<br/>172.19.0.2:8080]
+    Ingress --> Grafana[Grafana Pod<br/>higress-console-*<br/>172.19.0.2:3000]
+
+    style User fill:#e1f5ff
+    style CF fill:#fff3e0
+    style Host fill:#f3e5f5
+    style Docker fill:#e8f5e9
+    style Kind fill:#fce4ec
+    style K8s fill:#e0f2f1
+    style Gateway fill:#f1f8e9
+    style Controller fill:#fff8e1
+    style Ingress fill:#e3f2fd
+    style Apache fill:#ffebee
+    style Geese fill:#e8f5e9
+    style Console fill:#fce4ec
+    style Grafana fill:#e1f5ff
 ```
 
----
 
 ## HTTPS 配置验证
 
@@ -981,6 +827,7 @@ curl -k -I https://ai4ops.cc/geese-spec
 ### 部署新服务的步骤
 
 1. **创建 Deployment YAML**
+
    ```yaml
    apiVersion: apps/v1
    kind: Deployment
@@ -1005,6 +852,7 @@ curl -k -I https://ai4ops.cc/geese-spec
    ```
 
 2. **创建 Service YAML**
+
    ```yaml
    apiVersion: v1
    kind: Service
@@ -1021,6 +869,7 @@ curl -k -I https://ai4ops.cc/geese-spec
    ```
 
 3. **创建 Ingress YAML（含 TLS）**
+
    ```yaml
    apiVersion: networking.k8s.io/v1
    kind: Ingress
@@ -1050,6 +899,7 @@ curl -k -I https://ai4ops.cc/geese-spec
    ```
 
 4. **应用配置**
+
    ```bash
    kubectl apply -f your-deployment.yaml
    kubectl apply -f your-service.yaml
@@ -1061,6 +911,7 @@ curl -k -I https://ai4ops.cc/geese-spec
 如果需要为不同域名添加 HTTPS 服务：
 
 1. **获取多域名证书**
+
    ```bash
    /root/.acme.sh/acme.sh --issue --dns dns_cf \
      -d ai4ops.cc \
@@ -1070,6 +921,7 @@ curl -k -I https://ai4ops.cc/geese-spec
    ```
 
 2. **为新域名创建 TLS Secret**
+
    ```bash
    kubectl create secret tls admin-ai4ops-tls \
      --cert=/root/.acme.sh/admin.ai4ops.cc_ecc/fullchain.cer \
@@ -1078,6 +930,7 @@ curl -k -I https://ai4ops.cc/geese-spec
    ```
 
 3. **使用新 Secret 创建 Ingress**
+
    ```yaml
    spec:
      tls:
@@ -1222,10 +1075,10 @@ helm install higress ... --set global.o11y.enabled=true
 
 ### 证书有效期监控
 
-Let's Encrypt 证书有效期为 90 天，续期策略：
+Let's Encrypt 证书有效期为 90 天，续期策略如下：
 
 | 剩余天数 | 行为 | 说明 |
-|<---------|------|------|
+|----------|----------|----------|
 | > 60 | 不操作 | 正常运行中 |
 | ≤ 60 | 续期 | acme.sh 自动续期 |
 | ≤ 7 | 强制续期 | 紧急续期 |
