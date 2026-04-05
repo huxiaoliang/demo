@@ -1,0 +1,27 @@
+---
+# Ingress for Higress Console at root path (higher priority)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: higress-console-ingress
+  namespace: higress-system
+  annotations:
+    kubernetes.io/ingress.class: higress
+    higress.io/priority: "100"
+spec:
+  ingressClassName: higress
+  tls:
+  - hosts:
+    - ai4ops.cc
+    secretName: ai4ops-tls
+  rules:
+  - host: ai4ops.cc
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: higress-console
+            port:
+              number: 8080

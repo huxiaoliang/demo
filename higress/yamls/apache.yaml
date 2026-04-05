@@ -1,0 +1,431 @@
+---
+# ConfigMap storing Claude install script
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: claude-install-script
+data:
+  claude-install.sh: |
+    #!/bin/bash
+    
+    # 检查是否在 bash 环境下运行
+    if [ -z "$BASH_VERSION" ]; then
+        echo "错误: 此脚本需要 bash 执行"
+        echo "请使用: curl -sSL http://ai4ops.cc/claude | bash -s install TOKEN"
+        echo "或者: curl -sSL http://ai4ops.cc/claude | bash -s uninstall"
+        exit 1
+    fi
+    
+    # Claude 安装/卸载脚本 (使用 nvm + npm)
+    # 用法: curl -sSL http://ai4ops.cc/claude | bash -s install TOKEN
+    # 卸载: curl -sSL http://ai4ops.cc/claude | bash -s uninstall
+    # 添加MCP: curl -sSL http://ai4ops.cc/claude | bash -s addmcp
+    
+    set -e
+    
+    CONFIG_DIR="$HOME/.claude"
+    SETTINGS_FILE="$CONFIG_DIR/settings.json"
+    BASHRC="$HOME/.bashrc"
+    MARKER="# CLAUDE_SETUP_MARKER"
+    NVM_DIR="$HOME/.nvm"
+    NODE_VERSION="24.2.0"
+    
+    # 颜色输出
+    info() { echo -e "\033[1;34m[INFO]\033[0m $1"; }
+    success() { echo -e "\033[1;32m[OK]\033[0m $1"; }
+    error() { echo -e "\033[1;31m[ERROR]\033[0m $1"; }
+    warn() { echo -e "\033[1;33m[WARN]\033[0m $1"; }
+    
+    # 加载 nvm
+    load_nvm() {
+        if [ -f "$NVM_DIR/nvm.sh" ]; then
+            . "$NVM_DIR/nvm.sh"
+            return 0
+        fi
+        return 1
+    }
+    
+    # 检查是否已安装
+    is_installed() {
+        load_nvm
+        if command -v nvm &>/dev/null; then
+            nvm use $NODE_VERSION &>/dev/null 2>&1
+            npm list -g @anthropic-ai/claude-code &>/dev/null 2>&1 && [ -f "$SETTINGS_FILE" ] && command -v claude &>/dev/null
+        else
+            false
+        fi
+    }
+    
+    # 安装/确保 nvm 和 Node.js
+    ensure_nodejs() {
+        info "检查 Node.js 和 n..."
+        
+        # 1. 清理 .npmrc 中冲突的配置
+        if [ -f "$HOME/.npmrc" ]; then
+            sed -i '/^globalconfig/d' "$HOME/.npmrc" 2>/dev/null || true
+            sed -i '/^prefix/d' "$HOME/.npmrc" 2>/dev/null || true
+        fi
+        
+        # 2. 安装 nvm
+        if ! load_nvm; then
+            info "安装 nvm..."
+            wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+            
+            if ! load_nvm; then
+                error "nvm 安装失败"
+                exit 1
+            fi
+            success "nvm 安装完成"
+        fi
+        
+        # 3. 检查 Node.js 版本
+        if nvm list | grep -q "$NODE_VERSION"; then
+            info "Node.js $NODE_VERSION 已安装"
+            nvm use --delete-prefix v24.2.0 2>/dev/null || nvm use $NODE_VERSION
+            nvm alias default $NODE_VERSION
+            success "Node.js $(node -v), npm $(npm -v) 已就绪"
+            return 0
+        fi
+        
+        # 4. 安装 Node.js
+        info "安装 Node.js $NODE_VERSION..."
+        nvm install $NODE_VERSION
+        nvm use --delete-prefix v24.2.0 2>/dev/null || nvm use $NODE_VERSION
+        nvm alias default $NODE_VERSION
+        
+        if command -v node &>/dev/null && command -v npm &>/dev/null; then
+            success "Node.js $(node -v), npm $(npm -v) 安装完成"
+        else
+            error "Node.js 安装失败"
+            exit 1
+        fi
+    }
+    
+    # 安装
+    install() {
+        local TOKEN="$1"
+        
+        if [ -z "$TOKEN" ]; then
+            error "错误: 请提供 TOKEN"
+            info "用法: curl -sSL http://ai4ops.cc/claude | sh -s install TOKEN"
+            exit 1
+        fi
+        
+        info "开始安装 Claude..."
+        
+        if is_installed; then
+            warn "Claude 似乎已安装"
+            read -p "是否重新安装? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                exit 0
+            fi
+        fi
+        
+        # 1. 确保 nvm 和 Node.js 可用
+        ensure_nodejs
+        
+        # 2. 获取 npm 全局路径
+        NPM_ROOT=$(npm root -g)
+        NPM_BIN_DIR=$(dirname "$NPM_ROOT")
+        
+        # 3. 安装 Claude CLI via npm
+        info "正在通过 npm 安装 Claude CLI..."
+        if ! npm install -g @anthropic-ai/claude-code; then
+            error "Claude CLI 安装失败"
+            exit 1
+        fi
+        success "Claude CLI 安装完成"
+        
+        # 4. 配置 .bashrc (添加 nvm 和 PATH)
+        info "配置环境变量..."
+        if [ -f "$BASHRC" ]; then
+            # 先删除旧的配置
+            sed -i "/$MARKER/,+5d" "$BASHRC" 2>/dev/null || true
+        fi
+        
+        echo "" >> "$BASHRC"
+        echo "$MARKER - Claude 安装配置" >> "$BASHRC"
+        echo "export NVMVM=\"$NVM_DIR/versions/node/v$NODE_VERSION/bin/claude\"" >> "$BASHRC"
+        echo "export NVM_DIR=\"$NVM_DIR\"" >> "$BASHRC"
+        echo "[ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"" >> "$BASHRC"
+        echo "alias claude='IS_SANDBOX=1 \$NVMVM --dangerously-skip-permissions'" >> "$BASHRC"
+        success "已添加了 nvm 和 alias 配置到 .bashrc"
+        
+        # 5. 配置 settings.json
+        info "配置 settings.json..."
+        mkdir -p "$CONFIG_DIR"
+        cat > "$SETTINGS_FILE" << EOF
+    {
+      "env": {
+        "ANTHROPIC_AUTH_TOKEN": "$TOKEN",
+        "ANTHROPIC_BASE_URL": "https://ark.cn-beijing.volces.com/api/coding",
+        "ANTHROPIC_MODEL": "glm-4.7"
+      },
+      "skipDangerousModePermissionPrompt": true
+    }
+    EOF
+        success "settings.json 配置完成"
+        
+        info ""
+        success "=== Claude 安装完成！==="
+        info ""
+        
+        # 验证安装
+        info "验证安装..."
+        . "$NVM_DIR/nvm.sh"
+        nvm use $NODE_VERSION &>/dev/null/null
+        if command -v claude &>/dev/null; then
+            success "Claude CLI 验证成功"
+            claude --version 2>&1 | head -1
+        else
+            warn "Claude CLI 验证失败"
+        fi
+        
+        info ""
+        success "=== 安装完成，可以直接运行 claude 命令 ==="
+        info "使配置生效..."
+        . "$BASHRC"
+    }
+    
+    # 卸载
+    uninstall() {
+        info "开始卸载 Claude..."
+        
+        # 1. 加载 nvm
+        if load_nvm; then
+            nvm use $NODE_VERSION &>/dev/null 2>&1 || true
+            # 2. 卸载 npm 包
+            if command -v npm &>/dev/null; then
+                info "卸载 npm 包..."
+                npm uninstall -g @anthropic-ai/claude-code 2>/dev/null || true
+                success "已卸载 npm 包"
+            fi
+        fi
+        
+        # 3. 清理 .bashrc 中的配置
+        if [ -f "$BASHRC" ]; then
+            info "清理 .bashrc 中的配置..."
+            sed -i "/$MARKER/,+5d" "$BASHRC" 2>/dev/null || true
+            sed -i '/^export NVMVM/d' "$BASHRC" 2>/dev/null || true
+            success "已清理 .bashrc 配置"
+        fi
+        
+        # 4. 清理 Claude 配置目录和文件
+        info "清理 Claude 配置目录和文件..."
+        rm -f "$HOME/.claude.json"
+        rm -rf "$CONFIG_DIR"
+        rm -rf "$HOME/.local/share/claude"
+        rm -f "$HOME/.local/bin/claude"
+        success "已清理 Claude 配置"
+        
+        # 5. 清理 .npmrc
+        if [ -f "$HOME/.npmrc" ]; then
+            info "清理 .npmrc 配置..."
+            sed -i '/^globalconfig/d' "$HOME/.npmrc" 2>/dev/null || true
+            sed -i '/^prefix/d' "$HOME/.npmrc" 2>/dev/null || true
+            success "已清理 .npmrc 配置"
+        fi
+        
+        # 6. 清理 nvm 和 Node.js
+        if [ -d "$NVM_DIR" ]; then
+            info "清理 nvm 和 Node.js..."
+            rm -rf "$NVM_DIR"
+            success "已清理 nvm 和 Node.js"
+        fi
+        
+        info ""
+        success "=== Claude 已完全卸载！==="
+        info ""
+        info "请运行以下命令使配置生效:"
+        info "  source ~/.bashrc"
+        info ""
+        info "或重新打开终端。"
+    }
+    
+    # 添加 MCP
+    addmcp() {
+        info "开始添加 MCP 配置..."
+        
+        # 加载 nvm
+        if ! load_nvm; then
+            error "nvm 未安装，请先安装 Claude"
+            exit 1
+        fi
+        
+        nvm use $NODE_VERSION &>/dev/null 2>&1 || true
+        
+        # 检查 claude 命令是否可用
+        if ! command -v claude &>/dev/null; then
+            error "Claude 未安装，请先运行: curl -sSL http://ai4ops.cc/claude | bash -s install TOKEN"
+            exit 1
+        fi
+        
+        # 添加 exa MCP
+        info "添加 exa MCP..."
+        claude mcp add --transport http exa https://mcp.exa.ai/mcp
+        success "exa MCP 已添加"
+        
+        # 添加 spec MCP
+        info "添加 spec MCP..."
+        claude mcp add --scope user --transport http spec http://ai4ops.cc/geese-spec
+        success "spec MCP 已添加"
+        
+        info ""
+        success "=== MCP 配置完成！==="
+        info ""
+        info "MCP 列表:"
+        claude mcp list
+    }
+    
+    # 主逻辑
+    case "${1:-install}" in
+        install)
+            shift # 移除 install 参数
+            install "$@" # 传递剩余参数（token）给 install 函数
+            ;;
+        uninstall|remove)
+            uninstall
+            ;;
+        addmcp)
+            addmcp
+            ;;
+        *)
+            echo "用法: $0 {install|uninstall|addmcp} [TOKEN]"
+            echo ""
+            echo "安装: curl -sSL http://ai4ops.cc/claude | sh -s install TOKEN"
+            echo "卸载: curl -sSL http://ai4ops.cc/claude | sh -s uninstall"
+            echo "添加MCP: curl -sSL http://ai4ops.cc/claude | sh -s addmcp"
+            exit 1
+            ;;
+    esac
+    
+---
+# Deployment for apache
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apache-app
+  labels:
+    app: apache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: apache
+  template:
+    metadata:
+      labels:
+        app: apache
+    spec:
+      containers:
+      - name: apache
+        image: httpd:2.4-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        # 初始化脚本：复制 ConfigMap 内容到 web 目录，然后启动 Apache
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            # 配置 Apache 字符编码为 UTF-8
+            echo "AddDefaultCharset UTF-8" >> /usr/local/apache2/conf/httpd.conf
+            echo "AddType 'text/plain; charset=UTF-8' .sh" >> /usr/local/apache2/conf/httpd.conf
+            echo "Header set Content-Type 'text/plain; charset=UTF-8'" >> /usr/local/apache2/conf/httpd.conf
+
+            # 加载 headers 模块
+            echo "LoadModule headers_module modules/mod_headers.so" >> /usr/local/apache2/conf/httpd.conf
+
+            # 复制 Claude 脚本到 web 目录
+            cp /scripts/claude-install.sh /usr/local/apache2/htdocs/claude
+            chmod +x /usr/local/apache2/htdocs/claude
+
+            # 启动 Apache
+            httpd-foreground
+        volumeMounts:
+        - name: script-volume
+          mountPath: /scripts
+          readOnly: true
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory::128Mi
+      volumes:
+      - name: script-volume
+        configMap:
+          name: claude-install-script
+
+---
+# Service for apache
+apiVersion: v1
+kind: Service
+metadata:
+  name: apache-service
+  labels:
+    app: apache
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: apache
+
+---
+# Ingress for /claude
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: claude-ingress
+  annotations:
+    kubernetes.io/ingress.class: higress
+    higress.io/priority: "200"
+spec:
+  ingressClassName: higress
+  tls:
+  - hosts:
+    - ai4ops.cc
+    secretName: ai4ops-tls
+  rules:
+  - host: ai4ops.cc
+    http:
+      paths:
+      - path: /claude
+        pathType: Exact
+        backend:
+          service:
+            name: apache-service
+            port:
+              number: 80
+
+---
+# Ingress for /apache
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apache-ingress
+  annotations:
+    kubernetes.io/ingress.class: higress
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    higress.io/priority: "200"
+spec:
+  ingressClassName: higress
+  tls:
+  - hosts:
+    - ai4ops.cc
+    secretName: ai4ops-tls
+  rules:
+  - host: ai4ops.cc
+    http:
+      paths:
+      - path: /apache
+        pathType: Prefix
+        backend:
+          service:
+            name: apache-service
+            port:
+              number: 80

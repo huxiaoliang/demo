@@ -57,6 +57,25 @@ curl -I http://ai4ops.cc
 
 ---
 
+## 配置文件说明
+
+以下配置文件用于部署 Higress 环境，每个文件的作用如下：
+
+| 文件名 | 作用 | 命名空间 | 说明 |
+|--------|------|----------|------|
+| `kind.yaml` | Kind 集群配置 | - | 定义 Kind 集群结构、端口映射、镜像加速等 |
+| `higress-console-ingress.yaml` | Higress 控制台 Ingress | `higress-system` | 提供 `/` 路径访问 Higress 控制台和内置 Grafana |
+| `apache.yaml` | Apache 应用 + Claude 安装脚本 | `default` | 包含 Deployment、Service 和 3 个 Ingress（/apache, /claude） |
+| `geese-spec-higress.yaml` | Geese-spec MCP 服务 | `default` | 部署 geese-spec 应用和 /geese-spec 访问入口 |
+| `tls-secret.yaml` | TLS Secret 模板 | `higress-system` | 用于存储 Let's Encrypt 证书（需要通过 acme.sh 创建） |
+
+**重要说明**：
+- `higress-console-ingress.yaml` 配置的 path 是 `/`（Prefix），会捕获所有请求到 `ai4ops.cc`，包括 `/grafana`（Higress Console 内置路由）
+- `apache.yaml` 和 `geese-spec-higress.yaml` 都引用 `ai4ops-tls` Secret（来自 `tls-secret.yaml`）以启用 HTTPS
+- TLS 证书需要使用 acme.sh 手动创建，`tls-secret.yaml` 仅为模板文件
+
+---
+
 ## Kind 集群创建
 
 ### kind.yaml 配置说明
@@ -332,6 +351,200 @@ source ~/.bashrc
   -d ai4ops.cc \
   --email huxiaoliang.java@gmail.com
 ```
+
+### Let's Encrypt DNS-01 挑战原理
+
+#### 核心问题
+
+**Let's Encrypt 如何证明你拥有域名控制权？**
+
+```
+┌─────────────────────────────────────────┐
+│         Let's Encrypt              │
+│     "证明 ai4ops.cc 属于你！"     │
+└─────────────────────────────────────────┘
+```
+
+Let's Encrypt 需要验证后才会签发证书。
+
+---
+
+#### DNS-01 挑战流程
+
+```
+第 1 步：申请证书
+┌─────────────────────────────────────────┐
+│ 你 → acme.sh → Let's Encrypt     │
+│ "我想为 ai4ops.cc 获取证书"      │
+└─────────────────────────────────────────┘
+              ↓
+Let's Encrypt: "好的，证明你拥有这个域名"
+              ↓
+Let's Encrypt 生成随机验证字符串: "5NrPg0HWCPJnrUU..."
+```
+
+第 2 步：添加 DNS TXT 记录
+┌─────────────────────────────────────────┐
+│ acme.sh → Cloudflare API              │
+│ "添加这个 TXT 记录"                │
+└─────────────────────────────────────────┘
+              ↓
+Cloudflare: 添加记录
+域名: _acme-challenge.ai4ops.cc
+类型: TXT
+值:   "5NrPg0HWCPJnrUU..."
+```
+
+第 3 步：Let's Encrypt 验证
+```
+         Let's Encrypt              │
+│ "等待 DNS 传播..."                 │
+│ "查询 TXT 记录..."                  │
+└─────────────────────────────────────────┘
+              ↓
+Let's Encrypt 查询 DNS: _acme-challenge.ai4ops.cc
+              ↓
+如果值匹配 = "5NrPg0HWCPJnrUU..." → 验证成功！
+如果值不匹配 = 验证失败...
+```
+
+第 4 步：签发证书
+```
+         Let's Encrypt              │
+│ "验证通过，现在签发证书"         │
+└─────────────────────────────────────────┘
+              ↓
+返回证书和私钥文件
+```
+
+第 5 步：删除 DNS TXT 记录
+```
+         acme.sh → Cloudflare API              │
+│ "清理临时记录"                      │
+└─────────────────────────────────────────┘
+              ↓
+Cloudflare: 删除记录
+域名: _acme-challenge.ai4ops.cc
+```
+
+---
+
+#### 使用场景
+
+##### 场景 1：本地 Kind 集群（你的当前环境）
+
+| 特性 | HTTP-01 | DNS-01 |
+|------|----------|---------|
+| 需要 80 端口 | ✅ | ❌ |
+| 公网 IP 可达 | ❌ | ✅ |
+| 适用环境 | 有公网 IP | 内网/本地 |
+
+**为什么使用 DNS-01？**
+- Kind 集群在内网运行，没有公网 IP
+- Cloudflare CDN 无法访问内网 80 端口
+- DNS-01 只需要能控制域名 DNS 即可
+
+**实际流程**：
+```
+acme.sh 使用 Cloudflare API Token
+  ↓
+添加 TXT 记录到 Cloudflare
+  ↓
+Let's Encrypt 验证
+  ↓
+获取证书
+```
+
+##### 场景 2：通配符域名
+
+```
+需求：为 *.example.com 获取证书
+
+HTTP-01: 
+  - 需要为每个子域创建 /.well-known/acme-challenge/ 文件
+  - 无法一次性覆盖所有子域
+
+DNS-01:
+  - 只需要在 _acme-challenge.example.com 添加一个 TXT 记录
+  - 通配符域名自动生效
+```
+
+##### 场景 3：无法开放 80 端口
+
+```
+某些环境：
+- 公司内网
+- 只允许 443 端口
+- 防火墙限制
+
+DNS-01 完美避开了 80 端口的需求
+```
+
+---
+
+#### 为什么 acme.sh 能自动操作？
+
+### 关键：Cloudflare API Token
+
+```bash
+# 有 Token = 拥有 API 操作权限
+CF_Token="cfut_2Kw2SbVahd2nykZ3iEiT5QQe466r2aypN83K8GiR77daada2"
+```
+
+**acme.sh 使用 Token 的能力**：
+
+| 操作 | 需要 Token | 用途 |
+|------|------------|------|
+| 添加 TXT 记录 | ✅ | 验证域名所有权 |
+| 删除 TXT 记录 | ✅ | 验证后清理记录 |
+| 查询记录状态 | ✅ | 检查记录是否生效 |
+| 获取证书 | ✅ | 自动化整个流程 |
+| 证书续期 | ✅ | acme.sh 复用已保存的 Token |
+
+---
+
+#### 实际例子：你的环境
+
+```
+1. acme.sh 读取 CF_Token（从 account.conf）
+   ↓
+2. acme.sh 向 Let's Encrypt 申请证书
+   ↓
+3. Let's Encrypt 要求验证 ai4ops.cc
+   ↓
+4. acme.sh 使用 Token 调用 Cloudflare API
+   ↓
+5. Cloudflare 添加: _acme-challenge.ai4ops.cc TXT "xxx"
+   ↓
+6. Let's Encrypt 查询 DNS，验证通过
+   ↓
+7. Cloudflare 删除 TXT 记录
+   ↓
+8. Let's Encrypt 签发证书
+   ↓
+9. 证书保存到 /root/.acme.sh/ai4ops.cc_ecc/
+```
+
+---
+
+#### 对比 HTTP-01 和 DNS-01
+
+| 方面 | 验证文件位置 | 防火墙需求 | 公网需求 | 内网适用 |
+|------|----------------|----------|----------|----------|----------|
+| HTTP-01 | 服务器 /.well-known/acme-challenge/ | 开放 80 端口 | 需要 | ❌ |
+| DNS-01 | DNS TXT 记录 | 开放 53 端口 | 不需要 | ✅ |
+
+---
+
+#### 总结
+
+DNS TXT 记录用于：
+- **证明域名所有权**：只有能控制域名 DNS 的人才能添加/删除 TXT 记录
+- **自动化验证**：acme.sh 通过 API Token 自动添加/删除 TXT 记录
+- **无端口依赖**：不需要开放 80 端口
+- **内网友好**：适用于没有公网 IP 的环境（如 Kind）
+
+**关键**：Cloudflare API Token 提供了自动操作 DNS 的能力，让整个过程完全自动化。
 
 **成功输出**：
 ```
@@ -1017,20 +1230,6 @@ Let's Encrypt 证书有效期为 90 天，续期策略：
 | ≤ 60 | 续期 | acme.sh 自动续期 |
 | ≤ 7 | 强制续期 | 紧急续期 |
 | 0 | 过期 | 需要手动续期 |
-
-### 配置文件清单
-
-当前环境的配置文件：
-
-```bash
-/root/kind-cluster/
-├── kind.yaml                      # Kind 集群配置
-├── apache.yaml.complex         # Apache 应用（含 Ingress TLS）
-├── geese-spec-higress.yaml         # Geese-spec 应用（含 Ingress TLS）
-├── higress-console-ingress.yaml      # Higress Console（含 TLS）
-├── higress-grafana-ingress.yaml      # Grafana（含 TLS）
-└── tls-secret.yaml                # TLS Secret 模板
-```
 
 ### 环境变量配置
 

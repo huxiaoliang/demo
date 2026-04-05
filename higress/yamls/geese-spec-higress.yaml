@@ -1,0 +1,75 @@
+---
+# Deployment for geese-spec-mcp
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: geese-spec-app
+  labels:
+    app: geese-spec
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: geese-spec
+  template:
+    metadata:
+      labels:
+        app: geese-spec
+    spec:
+      containers:
+      - name: geese-spec
+        image: huxl/geese-mcp-server:e0f2650
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9000
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+
+---
+# Service for geese-spec-mcp
+apiVersion: v1
+kind: Service
+metadata:
+  name: geese-spec-service
+  labels:
+    app: geese-spec
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9000
+    targetPort: 9000
+    protocol: TCP
+  selector:
+    app: geese-spec
+
+---
+# Ingress for geese-spec-mcp
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: geese-spec-ingress
+  annotations:
+    kubernetes.io/ingress.class: higress
+    higress.io/priority: "200"
+spec:
+  ingressClassName: higress
+  tls:
+  - hosts:
+    - ai4ops.cc
+    secretName: ai4ops-tls
+  rules:
+  - host: ai4ops.cc
+    http:
+      paths:
+      - path: /geese-spec
+        pathType: Prefix
+        backend:
+          service:
+            name: geese-spec-service
+            port:
+              number: 9000
