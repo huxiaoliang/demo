@@ -382,6 +382,50 @@ Let's Encrypt: "好的，证明你拥有这个域名"
 Let's Encrypt 生成随机验证字符串: "5NrPg0HWCPJnrUU..."
 ```
 
+##### 第 2 步：添加 DNS TXT 记录
+
+```
+acme.sh → Cloudflare API
+"添加这个 TXT 记录"
+              ↓
+Cloudflare: 添加记录
+域名: _acme-challenge.ai4ops.cc
+类型: TXT
+值:   "5NrPg0HWCPJnrUU..."
+```
+
+##### 第 3 步：Let's Encrypt 验证
+
+```
+Let's Encrypt
+"等待 DNS 传播..."
+"查询 TXT 记录..."
+              ↓
+Let's Encrypt 查询 DNS: _acme-challenge.ai4ops.cc
+              ↓
+如果值匹配 = "5NrPg0HWCPJnrUU..." → 验证成功！
+如果值不匹配 = 验证失败...
+```
+
+##### 第 4 步：签发证书
+
+```
+Let's Encrypt
+"验证通过，现在签发证书"
+              ↓
+返回证书和私钥文件
+```
+
+##### 第 5 步：删除 DNS TXT 记录
+
+```
+acme.sh → Cloudflare API
+"清理临时记录"
+              ↓
+Cloudflare: 删除记录
+域名: _acme-challenge.ai4ops.cc
+```
+
 ---
 
 #### 使用场景
