@@ -184,8 +184,7 @@ data:
         
         info ""
         success "=== 安装完成，可以直接运行 claude 命令 ==="
-        info "使配置生效..."
-        . "$BASHRC"
+        info "使配置生效: . $BASHRC"
     }
     
     # 卸载
